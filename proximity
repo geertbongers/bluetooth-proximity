@@ -37,7 +37,7 @@ def bluetooth_rssi(addr):
     hci_sock = bt.hci_open_dev()
     hci_fd = hci_sock.fileno()
 
-    # Connect to device (to whatever you like)
+    # Connect to device
     bt_sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
     bt_sock.settimeout(10)
     result = bt_sock.connect_ex((addr, 1))  # PSM 1 - Service Discovery
@@ -64,7 +64,7 @@ def bluetooth_rssi(addr):
     except:
         return None
 
-# assume phone is initially far away
+# assume phone is initially out of range
 countdown = []
 rssi = []
 rssi_previous = []
