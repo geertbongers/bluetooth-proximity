@@ -18,6 +18,8 @@ parser.add_argument('--addresses', help='Multiple bluetooth addresses separated 
 parser.add_argument('--urls', help='Url to call to report bluetooth proximity, must match number of bluetooth addresses')
 parser.add_argument('--sleep_if_in_range', default='900', help='Time to wait untill next proximity check when device is in range.')
 parser.add_argument('--sleep_if_out_of_range', default='1', help='Time to wait untill next proximity check when device is out of range.')
+parser.add_argument('--heartbeat_sleep', default='120', help='Time to wait untill the urls are called regardeless of the change of signal strength. Functions as a heartbeat, to check if the script is still running.')
+parser.add_argument('--verbose', default='1', help='Display verbose logging')
 
 args = parser.parse_args()
 
@@ -25,7 +27,8 @@ bluetooth_addresses = args.addresses.split(',')
 urls = args.urls.split(',')
 sleep_if_in_range = int(args.sleep_if_in_range)
 sleep_if_out_of_range = int(args.sleep_if_out_of_range)
-debug = 1
+verbose_logging = int(args.verbose)
+heartbeat = int(args.heartbeat_sleep)
 
 print '[%s]' % ', '.join(map(str, bluetooth_addresses))
 
@@ -73,22 +76,24 @@ for i, bluetooth_address in enumerate(bluetooth_addresses):
 while True:
     # get rssi reading for address
     for i, bluetooth_address in enumerate(bluetooth_addresses):
+        url_called = False
         countdown[i] -= 1
         if countdown[i] <= 0:
             rssi[i] = bluetooth_rssi(bluetooth_address)
             if rssi[i] is None:
                 rssi[i] = -256
 
-            if debug:
+            if verbose_logging:
                 print datetime.datetime.now(), rssi[i], rssi_previous[i]
 
             if rssi[i] == rssi_previous[i]:
-                if debug:
+                if verbose_logging:
                     print "No change detected"
             else:
-                if debug:
+                if verbose_logging:
                     print "Opening url " + urls[i] + str(rssi[i])
                 urllib2.urlopen(urls[i] + str(rssi[i])).read()
+                url_called = True
 
             rssi_previous[i] = rssi[i]
 
@@ -97,4 +102,11 @@ while True:
             else:
                 countdown[i] = sleep_if_in_range
 
+        if not url_called and heartbeat <= 0:
+            if verbose_logging:
+                print "Opening url " + urls[i] + str(rssi[i])
+            urllib2.urlopen(urls[i] + str(rssi[i])).read()
+            heartbeat = int(args.heartbeat_sleep)
+
+    heartbeat -= 1
     time.sleep(1)

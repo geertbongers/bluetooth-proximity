@@ -1,6 +1,6 @@
 # Bluetooth proximity script
 
-A python script to determine the signal strength of the specified bluetooth address, and call the url with signal strength added to the end. If the device is out of range the value returned is -256, if it is touching the bluetooth dongle it will be around 38. The script uses hci to determine the signal strength.
+A python script to determine the signal strength of the specified bluetooth address, and call the url with signal strength added to the end. If the device is out of range the value returned is -256, if it is touching the bluetooth dongle it will be around 38. The value -257 will be returned if the signal strenght is not yet determined. The script uses hci to determine the signal strength.
 
 Example usage:
 
