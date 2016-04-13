@@ -5,14 +5,29 @@ import struct
 import array
 import bluetooth
 import bluetooth._bluetooth as bt
+import urllib2
 
 import time
 import os
 import sys
 import datetime
+import argparse
 
-bluetooth_addresses = sys.argv[1].split(',')
+parser = argparse.ArgumentParser(description='Determine bluetooth proximity.')
+parser.add_argument('--addresses', help='Multiple bluetooth addresses separated with a komma')
+parser.add_argument('--urls', help='Url to call to report bluetooth proximity, must match number of bluetooth addresses')
+parser.add_argument('--sleep_if_in_range', default='900', help='Time to wait untill next proximity check when device is in range.')
+parser.add_argument('--sleep_if_out_of_range', default='1', help='Time to wait untill next proximity check when device is out of range.')
+
+args = parser.parse_args()
+
+bluetooth_addresses = args.addresses.split(',')
+urls = args.urls.split(',')
+sleep_if_in_range = int(args.sleep_if_in_range)
+sleep_if_out_of_range = int(args.sleep_if_out_of_range)
 debug = 1
+
+print '[%s]' % ', '.join(map(str, bluetooth_addresses))
 
 def bluetooth_rssi(addr):
     # Open hci socket
@@ -34,7 +49,7 @@ def bluetooth_rssi(addr):
         # Get RSSI
         cmd_pkt=struct.pack('H', handle)
         rssi = bt.hci_send_req(hci_sock, bt.OGF_STATUS_PARAM,
-                     bt.OCF_READ_RSSI, bt.EVT_CMD_COMPLETE, 4, cmd_pkt)
+                               bt.OCF_READ_RSSI, bt.EVT_CMD_COMPLETE, 4, cmd_pkt)
         rssi = struct.unpack('b', rssi[3])[0]
 
         # Close sockets
@@ -46,29 +61,40 @@ def bluetooth_rssi(addr):
     except:
         return None
 
-far = True
-far_count = 0
-
 # assume phone is initially far away
-rssi = -255
-rssi_prev1 = -255
-rssi_prev2 = -255
+countdown = []
+rssi = []
+rssi_previous = []
+for i, bluetooth_address in enumerate(bluetooth_addresses):
+    countdown.append(1)
+    rssi.append(-257)
+    rssi_previous.append(-257)
 
 while True:
     # get rssi reading for address
-    for each (bluetooth_addr in bluetooth_addresses)
-        rssi = bluetooth_rssi(bluetooth_addr)
+    for i, bluetooth_address in enumerate(bluetooth_addresses):
+        countdown[i] -= 1
+        if countdown[i] <= 0:
+            rssi[i] = bluetooth_rssi(bluetooth_address)
+            if rssi[i] is None:
+                rssi[i] = -256
 
-        if debug:
-            print datetime.datetime.now(), rssi, rssi_prev1, rssi_prev2
+            if debug:
+                print datetime.datetime.now(), rssi[i], rssi_previous[i]
 
-        if rssi == rssi_prev1 == rssi_prev2 == None:
-            
+            if rssi[i] == rssi_previous[i]:
+                if debug:
+                    print "No change detected"
+            else:
+                if debug:
+                    print "Opening url " + urls[i] + str(rssi[i])
+                urllib2.urlopen(urls[i] + str(rssi[i])).read()
 
-        elif rssi == rssi_prev1 == rssi_prev2:
+            rssi_previous[i] = rssi[i]
 
-        else:
+            if rssi[i] == -256:
+                countdown[i] = sleep_if_out_of_range
+            else:
+                countdown[i] = sleep_if_in_range
 
-        time.sleep(2)
-        rssi_prev1 = rssi
-        rssi_prev2 = rssi_prev1
+    time.sleep(1)
